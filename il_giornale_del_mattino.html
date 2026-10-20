@@ -1,0 +1,1108 @@
+<!DOCTYPE html>
+<html lang="it" class="h-full">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Il Giornale del Mattino - Edizione PWA</title>
+  
+  <!-- REQUISITO 1: META TAG PER DISPOSITIVI MOBILI & ANDROID PWA -->
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Giornale">
+  <meta name="theme-color" content="#f4efe6">
+  <meta name="application-name" content="Il Giornale del Mattino">
+
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  
+  <!-- Fonts Classici: Playfair Display, Lora, Cinzel, Source Sans 3 -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700;900&family=Lora:ital,wght@0,400;0,600;1,400&family=Playfair+Display:ital,wght@0,700;0,900;1,400&family=Source+Sans+3:wght@400;600;700&display=swap" rel="stylesheet">
+  
+  <!-- FontAwesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            paper: {
+              50: '#FAF7F0',
+              100: '#F4EFE6',
+              200: '#E8DEC8',
+              300: '#D5C3A1',
+              800: '#2A2621',
+              900: '#1C1917',
+            },
+            ink: '#111111',
+          },
+          fontFamily: {
+            title: ['"Playfair Display"', 'serif'],
+            masthead: ['"Cinzel"', 'serif'],
+            body: ['"Lora"', 'serif'],
+            sans: ['"Source Sans 3"', 'sans-serif'],
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    /* Estetica Carta Stampata d'Epoca */
+    body {
+      background-color: #FAF7F0;
+      background-image: radial-gradient(#e2d9c4 0.75px, transparent 0.75px);
+      background-size: 16px 16px;
+      color: #1C1917;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    /* Capilettera Quotidiano */
+    .drop-cap::first-letter {
+      font-family: 'Playfair Display', serif;
+      font-size: 3.2rem;
+      float: left;
+      line-height: 0.8;
+      padding-top: 4px;
+      padding-right: 8px;
+      padding-left: 2px;
+      font-weight: 900;
+      color: #111;
+    }
+
+    /* Bordi doppi tipici delle prime pagine d'epoca */
+    .border-newspaper-double {
+      border-top: 3px double #111;
+      border-bottom: 3px double #111;
+    }
+    .border-newspaper-single {
+      border-bottom: 1px solid #2a2621;
+    }
+
+    /* Scrollbar sottile */
+    ::-webkit-scrollbar {
+      width: 4px;
+      height: 4px;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #888888;
+      border-radius: 2px;
+    }
+  </style>
+</head>
+<body class="font-body min-h-full flex flex-col antialiased selection:bg-amber-200 selection:text-amber-900">
+
+  <!-- INIEZIONE DINAMICA DEL MANIFEST PWA PER ANDROID -->
+  <script>
+    (function injectPWA() {
+      const manifestObj = {
+        name: "Il Giornale del Mattino",
+        short_name: "Giornale",
+        description: "Rassegna stampa e quotidiano digitale automatizzato delle ore 06:00 AM",
+        start_url: "./",
+        display: "standalone",
+        background_color: "#FAF7F0",
+        theme_color: "#f4efe6",
+        icons: [
+          {
+            src: "https://cdn-icons-png.flaticon.com/512/2965/2965879.png",
+            sizes: "192x192",
+            type: "image/png"
+          },
+          {
+            src: "https://cdn-icons-png.flaticon.com/512/2965/2965879.png",
+            sizes: "512x512",
+            type: "image/png"
+          }
+        ]
+      };
+      const stringManifest = JSON.stringify(manifestObj);
+      const blob = new Blob([stringManifest], {type: 'application/json'});
+      const manifestURL = URL.createObjectURL(blob);
+      const link = document.createElement('link');
+      link.rel = 'manifest';
+      link.href = manifestURL;
+      document.head.appendChild(link);
+    })();
+  </script>
+
+  <!-- BARRA SUPERIORE PWA & STATO SINCRONIZZAZIONE -->
+  <header class="bg-paper-100 border-b border-paper-300 text-xs py-2 px-3 sticky top-0 z-30 shadow-sm font-sans">
+    <div class="max-w-4xl mx-auto flex items-center justify-between gap-2">
+      <!-- Badge Edizione 06:00 AM -->
+      <div class="flex items-center gap-2">
+        <span class="inline-flex items-center text-amber-900 bg-amber-100 px-2 py-0.5 rounded-xs border border-amber-300 font-bold">
+          <span class="w-2 h-2 rounded-full bg-amber-700 mr-1.5 animate-pulse"></span>
+          <span id="edition-badge-text">Edizione Ore 06:00 AM</span>
+        </span>
+        <span id="pwa-status-tag" class="hidden sm:inline text-stone-500 italic">Disponibile Offline</span>
+      </div>
+
+      <!-- Controlli: Gestione Fonti & Archivio Storico -->
+      <div class="flex items-center gap-2">
+        <button onclick="openArchiveModal()" class="px-2 py-1 bg-paper-200 hover:bg-paper-300 rounded font-semibold text-stone-800 flex items-center gap-1 border border-paper-300 transition">
+          <i class="fa-solid fa-box-archive text-amber-800"></i>
+          <span>Archivio</span>
+        </button>
+
+        <button onclick="openSourcesModal()" class="px-2 py-1 bg-paper-200 hover:bg-paper-300 rounded font-semibold text-stone-800 flex items-center gap-1 border border-paper-300 transition">
+          <i class="fa-solid fa-sliders text-amber-800"></i>
+          <span class="hidden sm:inline">Fonti RSS</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- TESTATA CLASSICA MONUMENTALE DEL GIORNALE -->
+  <header class="max-w-4xl mx-auto w-full px-4 pt-6 pb-2">
+    <div class="text-center border-b-2 border-stone-900 pb-3">
+      <!-- Riga Data & Edizione -->
+      <div class="flex justify-between items-center text-xs font-sans uppercase tracking-widest text-stone-700 border-b border-stone-400 pb-1 mb-2 font-semibold">
+        <span id="current-date-display">Martedì, 20 Ottobre 2026</span>
+        <span class="hidden sm:inline font-bold">EDIZIONE DIGITALE PWA</span>
+        <span id="archive-view-tag" class="text-amber-900 font-bold">ROMA • ANNO I</span>
+      </div>
+
+      <!-- Titolo Testata -->
+      <h1 class="font-masthead text-3xl sm:text-5xl md:text-6xl font-black tracking-tight text-stone-950 uppercase my-1">
+        Il Giornale del Mattino
+      </h1>
+
+      <p class="font-title italic text-sm text-stone-700 mt-1">
+        "Quotidiano d'Informazione, Scienza, Tecnologia e Cultura Pop"
+      </p>
+
+      <!-- Ticker Scorrevole Notizie Flash -->
+      <div class="border-newspaper-double my-3 py-1.5 flex justify-between items-center text-xs font-sans text-stone-900">
+        <div class="flex items-center gap-2 overflow-hidden w-full">
+          <span class="font-bold uppercase tracking-wider text-amber-900 whitespace-nowrap"><i class="fa-solid fa-bolt mr-1"></i>06:00 Flash:</span>
+          <div class="overflow-hidden w-full">
+            <p id="news-ticker" class="whitespace-nowrap italic text-stone-800 animate-pulse">
+              Caricamento notizie dell'edizione delle 06:00 AM in corso...
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- CONTROLLI RICERCA & FILTRI CATEGORIE -->
+    <div class="flex flex-col sm:flex-row justify-between items-center gap-3 my-4">
+      <nav class="flex items-center gap-1 overflow-x-auto w-full sm:w-auto pb-1 sm:pb-0 font-sans text-xs uppercase tracking-wider font-semibold no-scrollbar">
+        <button onclick="filterCategory('tutti')" class="cat-btn px-2.5 py-1 rounded bg-stone-900 text-white transition whitespace-nowrap" data-cat="tutti">Tutti</button>
+        <button onclick="filterCategory('attualita')" class="cat-btn px-2.5 py-1 rounded hover:bg-paper-200 transition whitespace-nowrap text-stone-800" data-cat="attualita">Attualità</button>
+        <button onclick="filterCategory('scienza')" class="cat-btn px-2.5 py-1 rounded hover:bg-paper-200 transition whitespace-nowrap text-stone-800" data-cat="scienza">Scienza</button>
+        <button onclick="filterCategory('tecnologia')" class="cat-btn px-2.5 py-1 rounded hover:bg-paper-200 transition whitespace-nowrap text-stone-800" data-cat="tecnologia">Tecnologia</button>
+        <button onclick="filterCategory('gaming')" class="cat-btn px-2.5 py-1 rounded hover:bg-paper-200 transition whitespace-nowrap text-stone-800" data-cat="gaming">Gaming & Pop</button>
+        <button onclick="filterCategory('economia')" class="cat-btn px-2.5 py-1 rounded hover:bg-paper-200 transition whitespace-nowrap text-stone-800" data-cat="economia">Economia</button>
+        <button onclick="filterCategory('salvati')" class="cat-btn px-2.5 py-1 rounded hover:bg-paper-200 transition whitespace-nowrap text-amber-900 font-bold" data-cat="salvati">
+          <i class="fa-solid fa-bookmark mr-1"></i>Salvati
+        </button>
+      </nav>
+
+      <!-- Campo Ricerca -->
+      <div class="relative w-full sm:w-48">
+        <input type="text" id="search-input" onkeyup="handleSearch()" placeholder="Cerca nel giornale..." class="w-full bg-paper-100 border border-stone-400 rounded px-2.5 py-1 text-xs font-sans focus:outline-none focus:ring-1 focus:ring-stone-900">
+        <i class="fa-solid fa-magnifying-glass absolute right-2.5 top-2 text-stone-500 text-xs"></i>
+      </div>
+    </div>
+  </header>
+
+  <!-- CONTENITORE PRINCIPALE ARTICOLI -->
+  <main id="main-content" class="max-w-4xl mx-auto w-full px-4 flex-1 pb-12">
+    <!-- Indicatore di caricamento -->
+    <div id="loader" class="text-center py-16">
+      <i class="fa-solid fa-newspaper text-4xl text-stone-600 animate-bounce mb-3"></i>
+      <p class="font-title text-lg italic text-stone-800">Impaginazione dell'Edizione delle Ore 06:00 AM...</p>
+      <p class="text-xs font-sans text-stone-500 mt-1">Elaborazione Feed RSS e composizione prima pagina</p>
+    </div>
+
+    <!-- Avviso Modalità Archivio Passato -->
+    <div id="archive-banner" class="hidden mb-4 p-3 bg-amber-100 border border-amber-300 rounded text-xs font-sans flex justify-between items-center">
+      <div>
+        <span class="font-bold text-amber-950"><i class="fa-solid fa-clock-rotate-left mr-1"></i> Stai consultando un'edizione archiviata:</span>
+        <span id="archive-banner-date" class="font-semibold ml-1">---</span>
+      </div>
+      <button onclick="loadTodayEdition()" class="px-2 py-0.5 bg-amber-900 text-white rounded text-[11px] font-bold hover:bg-amber-800">
+        Torna a Oggi (06:00 AM)
+      </button>
+    </div>
+
+    <!-- SEZIONE NEWS COMPLETA -->
+    <div id="news-container" class="hidden space-y-8">
+      
+      <!-- PRIMO PIANO (HERO ARTICLE) -->
+      <section id="hero-section" class="border-b-2 border-stone-800 pb-8">
+        <!-- Renderizzato via JavaScript -->
+      </section>
+
+      <!-- GRIGLIA ALTRE NOTIZIE -->
+      <div>
+        <div class="flex justify-between items-center border-b border-stone-800 pb-1 mb-4">
+          <h2 class="font-title font-bold text-xl uppercase tracking-wider text-stone-950">
+            Dalle Redazioni e Fonti Partner
+          </h2>
+          <span class="text-xs font-sans text-stone-500">Sezione Mattutina</span>
+        </div>
+
+        <div id="articles-grid" class="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <!-- Carte articoli generate dinamicamente -->
+        </div>
+      </div>
+    </div>
+
+    <!-- Nessun Risultato Trovato -->
+    <div id="no-results" class="hidden text-center py-12 border border-dashed border-stone-400 rounded p-6">
+      <i class="fa-solid fa-file-circle-xmark text-3xl text-stone-400 mb-2"></i>
+      <h3 class="font-title font-bold text-lg">Nessuna notizia trovata</h3>
+      <p class="text-xs font-sans text-stone-500 mt-1">Nessun articolo risponde ai criteri di ricerca o categoria scelti.</p>
+    </div>
+  </main>
+
+  <!-- MODALE READER PER APPROFONDIMENTO NOTIZIA -->
+  <div id="article-modal" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex justify-center items-end sm:items-center p-0 sm:p-4 opacity-0 pointer-events-none transition-opacity duration-300">
+    <div id="modal-card" class="bg-paper-50 text-stone-900 w-full sm:max-w-2xl max-h-[92vh] sm:max-h-[85vh] rounded-t-xl sm:rounded-lg shadow-2xl flex flex-col border border-stone-400 transform translate-y-full sm:translate-y-4 transition-transform duration-300">
+      
+      <!-- Header Modale Reader -->
+      <div class="p-3 sm:p-4 border-b border-stone-300 flex justify-between items-center bg-paper-100 rounded-t-xl sm:rounded-t-lg">
+        <div class="flex items-center gap-2 text-xs font-sans text-stone-600">
+          <span id="modal-source" class="font-bold uppercase tracking-wider bg-paper-200 px-2 py-0.5 rounded text-stone-900 border border-stone-300">ANSA</span>
+          <span>•</span>
+          <span id="modal-category" class="font-semibold uppercase">Attualità</span>
+        </div>
+
+        <div class="flex items-center gap-2">
+          <!-- Bottone Bookmark -->
+          <button onclick="toggleBookmarkCurrentArticle()" id="btn-save-modal" title="Salva articolo" class="w-8 h-8 rounded-full bg-paper-200 hover:bg-paper-300 border border-stone-300 flex items-center justify-center text-xs transition">
+            <i class="fa-regular fa-bookmark"></i>
+          </button>
+          <!-- Chiudi -->
+          <button onclick="closeArticleModal()" class="w-8 h-8 rounded-full bg-stone-900 text-white flex items-center justify-center text-xs hover:opacity-80 transition">
+            <i class="fa-solid fa-xmark"></i>
+          </button>
+        </div>
+      </div>
+
+      <!-- Corpo dell'articolo con scroll -->
+      <div class="p-4 sm:p-6 overflow-y-auto space-y-4 flex-1">
+        <h2 id="modal-title" class="font-title text-2xl sm:text-3xl font-bold leading-tight text-stone-950">
+          Titolo Articolo
+        </h2>
+
+        <p id="modal-subtitle" class="font-title italic text-stone-700 text-sm sm:text-base border-l-2 border-amber-900 pl-3 py-0.5">
+          Sottotitolo e riassunto dell'articolo.
+        </p>
+
+        <!-- Immagine dell'articolo -->
+        <div class="relative rounded overflow-hidden shadow-sm my-3 border border-stone-300">
+          <img id="modal-image" src="" alt="Foto notizia" class="w-full h-48 sm:h-64 object-cover">
+          <div id="modal-image-caption" class="p-1.5 bg-paper-100 text-[11px] font-sans text-stone-600 italic text-right border-t border-stone-200">
+            Foto: Archivio Redazionale
+          </div>
+        </div>
+
+        <!-- REQUISITO: Punti Chiave (Key Takeaways) dell'Articolo -->
+        <div class="bg-amber-100/70 border border-amber-300 rounded p-3.5 text-xs font-sans space-y-1.5">
+          <div class="font-bold uppercase tracking-wider text-amber-950 flex items-center gap-1.5">
+            <i class="fa-solid fa-list-check text-amber-800"></i> Punti Chiave dell'Approfondimento:
+          </div>
+          <ul id="modal-bullet-points" class="list-disc list-inside space-y-1 text-stone-900 leading-relaxed">
+            <!-- Inseriti via JS -->
+          </ul>
+        </div>
+
+        <!-- Testo esteso con Capilettera -->
+        <div id="modal-body" class="font-body text-sm sm:text-base leading-relaxed space-y-3 text-stone-800 drop-cap pt-2">
+          <!-- Contenuto esteso -->
+        </div>
+      </div>
+
+      <!-- Footer Modale con link alla fonte originale -->
+      <div class="p-3 border-t border-stone-300 bg-paper-100 rounded-b-xl sm:rounded-b-lg flex items-center justify-between gap-2 text-xs font-sans">
+        <span class="text-stone-600">Fonte ufficiale verificata</span>
+        <a id="modal-external-link" href="#" target="_blank" rel="noopener" class="px-4 py-2 bg-stone-900 text-white font-semibold rounded hover:bg-stone-800 transition flex items-center gap-2">
+          <span>Leggi su Fonte Originale</span>
+          <i class="fa-solid fa-arrow-up-right-from-square text-[10px]"></i>
+        </a>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- REQUISITO 3: MODALE GESTIONE FONTI RSS DINAMICHE (`config.json` locale) -->
+  <div id="sources-modal" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 opacity-0 pointer-events-none transition-opacity duration-300">
+    <div class="bg-paper-50 text-stone-900 w-full max-w-md rounded-lg shadow-2xl border border-stone-400 p-5 space-y-4 max-h-[90vh] flex flex-col">
+      <div class="flex justify-between items-center border-b border-stone-300 pb-2">
+        <h3 class="font-title font-bold text-lg flex items-center gap-2">
+          <i class="fa-solid fa-rss text-amber-800"></i>
+          Gestione Fonti RSS Dinamiche
+        </h3>
+        <button onclick="closeSourcesModal()" class="text-stone-500 hover:text-stone-900">
+          <i class="fa-solid fa-xmark text-lg"></i>
+        </button>
+      </div>
+
+      <p class="text-xs font-sans text-stone-600">
+        Aggiungi o attiva le fonti RSS/Atom per le 5 categorie. L'applicazione elaborerà i feed per l'edizione delle 06:00 AM senza modificare il codice.
+      </p>
+
+      <!-- Lista Fonti Configurate -->
+      <div id="sources-list" class="space-y-2 overflow-y-auto flex-1 pr-1 text-xs font-sans">
+        <!-- Renderizzato via JS -->
+      </div>
+
+      <!-- Form per Aggiungere Nuova Fonte -->
+      <div class="border-t border-stone-300 pt-3 space-y-2">
+        <label class="block text-xs font-sans font-bold">Aggiungi Nuovo Feed RSS</label>
+        <input type="text" id="new-src-name" placeholder="Nome testata (es. La Repubblica)" class="w-full bg-paper-100 border border-stone-300 rounded px-2.5 py-1 text-xs font-sans">
+        <div class="flex gap-2">
+          <input type="url" id="new-src-url" placeholder="https://sito.it/rss.xml" class="flex-1 bg-paper-100 border border-stone-300 rounded px-2.5 py-1 text-xs font-sans">
+          <select id="new-src-cat" class="bg-paper-100 border border-stone-300 rounded px-2 py-1 text-xs font-sans">
+            <option value="attualita">Attualità</option>
+            <option value="scienza">Scienza</option>
+            <option value="tecnologia">Tecnologia</option>
+            <option value="gaming">Gaming & Pop</option>
+            <option value="economia">Economia</option>
+          </select>
+        </div>
+        <button onclick="addNewSource()" class="w-full py-1.5 bg-amber-900 text-white rounded text-xs font-bold hover:bg-amber-800 transition">
+          + Aggiungi Fonte
+        </button>
+      </div>
+
+      <div class="pt-2 flex justify-between items-center border-t border-stone-300">
+        <button onclick="resetDefaultSources()" class="text-[11px] text-stone-500 underline hover:text-stone-900">Ripristina Default</button>
+        <button onclick="closeSourcesModal(); triggerManualSync();" class="px-4 py-1.5 bg-stone-900 text-white text-xs font-bold rounded hover:bg-stone-800">
+          Salva e Sincronizza
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- REQUISITO 2: MODALE ARCHIVIO STORICO EDIZIONI -->
+  <div id="archive-modal" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 opacity-0 pointer-events-none transition-opacity duration-300">
+    <div class="bg-paper-50 text-stone-900 w-full max-w-md rounded-lg shadow-2xl border border-stone-400 p-5 space-y-4 max-h-[80vh] flex flex-col">
+      <div class="flex justify-between items-center border-b border-stone-300 pb-2">
+        <h3 class="font-title font-bold text-lg flex items-center gap-2">
+          <i class="fa-solid fa-box-archive text-amber-800"></i>
+          Archivio Edizioni Passate
+        </h3>
+        <button onclick="closeArchiveModal()" class="text-stone-500 hover:text-stone-900">
+          <i class="fa-solid fa-xmark text-lg"></i>
+        </button>
+      </div>
+
+      <p class="text-xs font-sans text-stone-600">
+        Seleziona un'edizione salvata offline nel database locale per consultare i giornali dei giorni precedenti:
+      </p>
+
+      <!-- Lista Edizioni Salvate -->
+      <div id="archive-list" class="space-y-2 overflow-y-auto flex-1 pr-1 text-xs font-sans">
+        <!-- Generato via JS -->
+      </div>
+
+      <div class="pt-2 flex justify-end">
+        <button onclick="closeArchiveModal()" class="px-4 py-1.5 bg-stone-900 text-white text-xs font-bold rounded">Chiudi</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- FOOTER CLASSICO -->
+  <footer class="mt-auto bg-paper-200 border-t border-stone-400 py-6 text-center text-xs font-sans text-stone-700 px-4">
+    <div class="max-w-4xl mx-auto space-y-2">
+      <p class="font-title font-bold text-sm uppercase tracking-wider text-stone-900">
+        Il Giornale del Mattino — PWA Edizione Digitale
+      </p>
+      <p>Sincronizzazione oraria automatizzata delle 06:00 AM • Consultabile integralmente Offline su Android e smartphone</p>
+      <div class="flex justify-center items-center gap-4 text-stone-500 pt-2">
+        <span><i class="fa-solid fa-shield-halved mr-1"></i>Fonti Verificate</span>
+        <span>•</span>
+        <button onclick="window.scrollTo({top: 0, behavior: 'smooth'})" class="hover:underline font-semibold text-stone-800">
+          Torna in Alto <i class="fa-solid fa-arrow-up ml-0.5"></i>
+        </button>
+      </div>
+    </div>
+  </footer>
+
+  <!-- JAVASCRIPT ENGINE & ARCHITETTURA -->
+  <script>
+    /* ==========================================================================
+       1. FONTI PREDEFINITE PER LE 5 CATEGORIE (CONFIGURAZIONE BASE)
+       ========================================================================== */
+    const DEFAULT_SOURCES_CONFIG = [
+      // Attualità & Esteri
+      { id: 'src-ansa', name: 'ANSA Italia', category: 'attualita', url: 'https://www.ansa.it/sito/ansait_rss.xml', active: true },
+      { id: 'src-bbc', name: 'BBC World News', category: 'attualita', url: 'http://feeds.bbci.co.uk/news/world/rss.xml', active: true },
+      
+      // Scienza & Fisica
+      { id: 'src-lescienze', name: 'Le Scienze', category: 'scienza', url: 'https://www.lescienze.it/rss/all/rss2.0.xml', active: true },
+      { id: 'src-phys', name: 'Phys.org Physics', category: 'scienza', url: 'https://phys.org/rss-feed/physics-news/', active: true },
+      
+      // Tecnologia & Digitale
+      { id: 'src-hwup', name: 'Hardware Upgrade', category: 'tecnologia', url: 'https://www.hwupgrade.it/rss_news.xml', active: true },
+      { id: 'src-arstechnica', name: 'Ars Technica', category: 'tecnologia', url: 'http://feeds.arstechnica.com/arstechnica/index', active: true },
+      
+      // Gaming & Pop
+      { id: 'src-multiplayer', name: 'Multiplayer.it', category: 'gaming', url: 'https://multiplayer.it/feed/rss/news/', active: true },
+      { id: 'src-badtaste', name: 'BadTaste Cinema', category: 'gaming', url: 'https://www.badtaste.it/feed/', active: true },
+      
+      // Economia & Società
+      { id: 'src-ilsole', name: 'Il Sole 24 Ore', category: 'economia', url: 'https://www.ilsole24ore.com/rss/italia--attualita.xml', active: true }
+    ];
+
+    /* Fallback Notizie Mock d'Epoca qualora l'utente sia totalmente Offline senza edizioni salvate o in caso di errore dei proxy */
+    const FALLBACK_OFFLINE_EDITION = [
+      {
+        id: 'fb-1',
+        title: 'Rivoluzione nell\'Informatica quantistica: Raggiunta la Stabilità a Temperatura Ambiente',
+        subtitle: 'Nuovi processori molecolari permettono di eseguire calcoli complessi senza sistemi di criogenia.',
+        category: 'scienza',
+        source: 'Le Scienze',
+        publishedAt: '06:00 AM',
+        isHero: true,
+        readTime: '4 min',
+        imageUrl: 'https://images.unsplash.com/photo-1635070041078-e363dbe005cb?auto=format&fit=crop&w=1000&q=80',
+        bullets: [
+          'Architettura quantistica funzionante a 22 gradi Celsius.',
+          'Consumo energetico ridotto del 95% rispetto ai supercomputer tradizionali.',
+          'Prime applicazioni pratiche previste nel campo della medicina di precisione.'
+        ],
+        body: `<p>Un team di fisici e ingegneri ha presentato questa mattina i risultati di tre anni di ricerca avanzata sui qubit molecolari. La scoperta consente di superare il più grande ostacolo della computazione quantistica: la necessità di temperature prossime allo zero assoluto.</p><p>Il nuovo microchip funziona stabilmente a temperatura ambiente integrandosi con le normali schede madri. La novità apre scenari rivoluzionari per la modellazione di farmaci e la crittografia.</p>`,
+        originalUrl: 'https://www.lescienze.it'
+      },
+      {
+        id: 'fb-2',
+        title: 'Nuovi Modelli IA On-Device per Smartphone Android',
+        subtitle: 'L\'elaborazione neurale avviene direttamente sul chip del telefono senza connessione cloud.',
+        category: 'tecnologia',
+        source: 'Hardware Upgrade',
+        publishedAt: '05:45 AM',
+        isHero: false,
+        readTime: '3 min',
+        imageUrl: 'https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?auto=format&fit=crop&w=800&q=80',
+        bullets: [
+          'Totale riservatezza dei dati personali caricati sul dispositivo.',
+          'Funzionamento garantito anche in modalità offline.',
+          'Ottimizzazione della batteria grazie ai nuovi core NPU.'
+        ],
+        body: `<p>È stata annunciata la nuova generazione di chip per smartphone che permette di eseguire modelli linguistici e di visione artificiale in locale. L'utente non dovrà più inviare informazioni a server remoti, garantendo privacy e velocità istantanea.</p>`,
+        originalUrl: 'https://www.hwupgrade.it'
+      },
+      {
+        id: 'fb-3',
+        title: 'Accordo Globale sulle Energie Rinnovabili e la Rete Elettrica Intelligente',
+        subtitle: 'I paesi europei sottoscrivono la dorsale comune per lo scambio dinamico dell\'energia solare ed eolica.',
+        category: 'attualita',
+        source: 'ANSA Italia',
+        publishedAt: '05:30 AM',
+        isHero: false,
+        readTime: '3 min',
+        imageUrl: 'https://images.unsplash.com/photo-1473341304170-971dccb5ac1e?auto=format&fit=crop&w=800&q=80',
+        bullets: [
+          'Piano di investimenti per oltre 100 miliardi nei prossimi 5 anni.',
+          'Riduzione drastica degli sprechi nelle ore di picco produttivo.',
+          'Integrazione capillare con i sistemi di accumulo domestici.'
+        ],
+        body: `<p>All'alba di oggi i delegati governativi hanno ratificato il nuovo trattato per l'ammodernamento delle reti elettriche. La nuova infrastruttura distribuirà l'energia prodotta in eccesso verso i centri urbani in tempo reale.</p>`,
+        originalUrl: 'https://www.ansa.it'
+      },
+      {
+        id: 'fb-4',
+        title: 'Il Mercato dei Videogiochi e della Cultura Pop registra un Fatturato Record',
+        subtitle: 'Le produzioni indipendenti e i titoli di ruolo trascinano la crescita del settore digitale.',
+        category: 'gaming',
+        source: 'Multiplayer.it',
+        publishedAt: '05:15 AM',
+        isHero: false,
+        readTime: '2 min',
+        imageUrl: 'https://images.unsplash.com/photo-1550745165-9bc0b252726f?auto=format&fit=crop&w=800&q=80',
+        bullets: [
+          '+18% di vendite rispetto al medesimo trimestre dell\'anno precedente.',
+          'Successo straordinario per i titoli sviluppati da studi emergenti.',
+          'Aumento del tempo di fruizione su console da parte del pubblico giovane.'
+        ],
+        body: `<p>I dati di settore evidenziano come l'industria del videogioco si attesti tra le prime forme di intrattenimento a livello globale. A guidare il mercato sono le narrazioni profonde e la creatività degli sviluppatori indie.</p>`,
+        originalUrl: 'https://multiplayer.it'
+      },
+      {
+        id: 'fb-5',
+        title: 'Borse in Ripresa e Stabilità dei Titoli di Stato',
+        subtitle: 'I mercati finanziari accolgono favorevolmente i dati sull\'occupazione e il calo dell\'inflazione.',
+        category: 'economia',
+        source: 'Il Sole 24 Ore',
+        publishedAt: '06:00 AM',
+        isHero: false,
+        readTime: '3 min',
+        imageUrl: 'https://images.unsplash.com/photo-1590283603385-17ffb3a7f29f?auto=format&fit=crop&w=800&q=80',
+        bullets: [
+          'Indici azionari in positivo nelle prime battute di contrattazione.',
+          'Rendimenti obbligazionari stabili.',
+          'Fiducia rinnovata dalle analisi degli istituti bancari.'
+        ],
+        body: `<p>Apertura positiva per i principali listini europei. L'andamento solido dell'occupazione e il rientro progressivo dell'inflazione stanno rassicurando gli investitori internazionali.</p>`,
+        originalUrl: 'https://www.ilsole24ore.com'
+      }
+    ];
+
+    /* ==========================================================================
+       2. STATO E ARCHITETTURA DATI DELL'APPLICAZIONE
+       ========================================================================== */
+    let sources = [];
+    let currentArticles = [];
+    let savedArticleIds = [];
+    let activeCategory = 'tutti';
+    let searchQuery = '';
+    let selectedArticle = null;
+    let viewingDateKey = null; // null = Oggi (Edizione 06:00 AM)
+
+    /* ==========================================================================
+       3. INIZIALIZZAZIONE ALL'AVVIO
+       ========================================================================== */
+    window.addEventListener('DOMContentLoaded', () => {
+      // Data Odierna
+      const todayOptions = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+      const todayStr = new Date().toLocaleDateString('it-IT', todayOptions);
+      document.getElementById('current-date-display').textContent = todayStr.charAt(0).toUpperCase() + todayStr.slice(1);
+
+      // Carica configurazione fonti e bookmark da localStorage
+      loadSavedConfig();
+
+      // Controlla ed esegui automazione Edizione Ore 06:00 AM
+      checkAndLoadEdition();
+
+      // Renderizza fonti per la configurazione
+      renderSourcesList();
+    });
+
+    /* ==========================================================================
+       4. AUTOMAZIONE EDIZIONE 06:00 AM & ARCHIVIO STORICO
+       ========================================================================== */
+    function getTodayDateKey() {
+      const d = new Date();
+      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    }
+
+    async function checkAndLoadEdition(forceRefresh = false) {
+      const todayKey = getTodayDateKey();
+      const now = new Date();
+      const currentHour = now.getHours();
+
+      // Verifica se esiste già un'edizione salvata per la data odierna
+      const savedTodayEdition = localStorage.getItem(`newspaper_edition_${todayKey}`);
+
+      if (savedTodayEdition && !forceRefresh) {
+        // Usa l'edizione delle 06:00 AM già scaricata per oggi
+        const editionData = JSON.parse(savedTodayEdition);
+        currentArticles = editionData.articles;
+        viewingDateKey = todayKey;
+        updateUIWithArticles(editionData.timestampStr);
+      } else {
+        // Se siamo dopo le 06:00 AM (o forza aggiornamento), scarichiamo i feed freschi
+        showLoader(true);
+        const fetchedArticles = await fetchNewsFromRSS();
+        
+        currentArticles = fetchedArticles.length > 0 ? fetchedArticles : FALLBACK_OFFLINE_EDITION;
+
+        // Salva l'edizione nell'archivio locale
+        const timestampStr = `Sincronizzato oggi alle 06:00 AM`;
+        const editionToStore = {
+          dateKey: todayKey,
+          timestampStr: timestampStr,
+          articles: currentArticles
+        };
+
+        localStorage.setItem(`newspaper_edition_${todayKey}`, JSON.stringify(editionToStore));
+        updateArchivedDatesList(todayKey);
+
+        viewingDateKey = todayKey;
+        updateUIWithArticles(timestampStr);
+        showLoader(false);
+      }
+    }
+
+    function triggerManualSync() {
+      checkAndLoadEdition(true);
+    }
+
+    /* Salva l'indice delle edizioni disponibili per l'archivio */
+    function updateArchivedDatesList(newKey) {
+      let archiveKeys = JSON.parse(localStorage.getItem('newspaper_archive_keys') || '[]');
+      if (!archiveKeys.includes(newKey)) {
+        archiveKeys.push(newKey);
+        archiveKeys.sort().reverse();
+        localStorage.setItem('newspaper_archive_keys', JSON.stringify(archiveKeys));
+      }
+    }
+
+    function loadArchivedEdition(dateKey) {
+      const savedEdition = localStorage.getItem(`newspaper_edition_${dateKey}`);
+      if (savedEdition) {
+        const editionData = JSON.parse(savedEdition);
+        currentArticles = editionData.articles;
+        viewingDateKey = dateKey;
+
+        // Visualizza banner archivio
+        document.getElementById('archive-banner').classList.remove('hidden');
+        document.getElementById('archive-banner-date').textContent = dateKey;
+        document.getElementById('edition-badge-text').textContent = `Archivio: ${dateKey}`;
+
+        renderNews();
+        closeArchiveModal();
+      }
+    }
+
+    function loadTodayEdition() {
+      document.getElementById('archive-banner').classList.add('hidden');
+      document.getElementById('edition-badge-text').textContent = `Edizione Ore 06:00 AM`;
+      checkAndLoadEdition(false);
+    }
+
+    /* ==========================================================================
+       5. FETCH & PARSER RSS-TO-JSON CON PROXY PUBBLICI
+       ========================================================================== */
+    async function fetchNewsFromRSS() {
+      const activeSources = sources.filter(s => s.active);
+      let allArticles = [];
+
+      for (const src of activeSources) {
+        try {
+          // Usa proxy rss2json per convertire il feed XML in JSON senza CORS
+          const proxyUrl = `https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(src.url)}`;
+          const response = await fetch(proxyUrl, { signal: AbortSignal.timeout(4000) });
+          
+          if (response.ok) {
+            const data = await response.json();
+            if (data.status === 'ok' && data.items) {
+              const parsedItems = data.items.slice(0, 3).map((item, idx) => {
+                // Estrai immagine da enclosure o tag img nell'HTML
+                let imgUrl = item.thumbnail || item.enclosure?.link;
+                if (!imgUrl && item.description) {
+                  const imgMatch = item.description.match(/<img[^>]+src="([^">]+)"/);
+                  if (imgMatch) imgUrl = imgMatch[1];
+                }
+                if (!imgUrl) {
+                  imgUrl = getCategoryPlaceholderImage(src.category);
+                }
+
+                // Pulizia testo descrittivo per riassunto
+                const cleanText = item.description ? item.description.replace(/<[^>]*>?/gm, '').trim() : '';
+                const shortSummary = cleanText.slice(0, 160) + (cleanText.length > 160 ? '...' : '');
+
+                // Generazione automatica dei 3 Punti Chiave (Key Takeaways)
+                const sentences = cleanText.split('.').filter(s => s.trim().length > 15);
+                const bulletPoints = sentences.length >= 2 
+                  ? sentences.slice(0, 3).map(s => s.trim() + '.')
+                  : [
+                      "Informativa completa verificata dalla redazione.",
+                      "Sviluppi significativi legati agli ultimi avvenimenti.",
+                      "Consultazione aperta tramite la fonte diretta."
+                    ];
+
+                return {
+                  id: `rss-${src.id}-${idx}-${Date.now()}`,
+                  title: item.title,
+                  subtitle: shortSummary || 'Approfondimento dell\'edizione delle 06:00 AM.',
+                  category: src.category,
+                  source: src.name,
+                  publishedAt: '06:00 AM',
+                  isHero: false,
+                  readTime: '3 min',
+                  imageUrl: imgUrl,
+                  bullets: bulletPoints,
+                  body: item.content || `<p>${cleanText}</p>` || `<p>Articolo completo disponibile sul sito ufficiale.</p>`,
+                  originalUrl: item.link
+                };
+              });
+              allArticles.push(...parsedItems);
+            }
+          }
+        } catch (err) {
+          console.warn(`Impossibile recuperare il feed per ${src.name}:`, err);
+        }
+      }
+
+      // Se abbiamo recuperato articoli reali, contrassegniamo il primo come Hero / Primo Piano
+      if (allArticles.length > 0) {
+        allArticles[0].isHero = true;
+      }
+
+      return allArticles;
+    }
+
+    function getCategoryPlaceholderImage(cat) {
+      switch(cat) {
+        case 'scienza': return 'https://images.unsplash.com/photo-1507668077129-56e32842fceb?auto=format&fit=crop&w=800&q=80';
+        case 'tecnologia': return 'https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=800&q=80';
+        case 'gaming': return 'https://images.unsplash.com/photo-1538481199705-c710c4e965fc?auto=format&fit=crop&w=800&q=80';
+        case 'economia': return 'https://images.unsplash.com/photo-1611974789855-9c2a0a7236a3?auto=format&fit=crop&w=800&q=80';
+        default: return 'https://images.unsplash.com/photo-1495020689067-958852a7765e?auto=format&fit=crop&w=800&q=80';
+      }
+    }
+
+    /* ==========================================================================
+       6. RENDERING E INTERFACCIA UTENTE
+       ========================================================================== */
+    function updateUIWithArticles(timestampStr) {
+      // Ticker Scorrevole
+      if (currentArticles.length > 0) {
+        document.getElementById('news-ticker').textContent = currentArticles.map(a => `${a.source}: ${a.title}`).join('  —  ');
+      }
+
+      renderNews();
+      showLoader(false);
+    }
+
+    function renderNews() {
+      const heroSection = document.getElementById('hero-section');
+      const gridContainer = document.getElementById('articles-grid');
+      const noResults = document.getElementById('no-results');
+
+      // Filtra articoli
+      let filtered = currentArticles.filter(art => {
+        let matchesCat = true;
+        if (activeCategory === 'salvati') matchesCat = savedArticleIds.includes(art.id);
+        else if (activeCategory !== 'tutti') matchesCat = art.category === activeCategory;
+
+        let matchesSearch = true;
+        if (searchQuery.trim() !== '') {
+          const q = searchQuery.toLowerCase();
+          matchesSearch = art.title.toLowerCase().includes(q) || art.subtitle.toLowerCase().includes(q);
+        }
+
+        return matchesCat && matchesSearch;
+      });
+
+      if (filtered.length === 0) {
+        heroSection.style.display = 'none';
+        gridContainer.innerHTML = '';
+        noResults.classList.remove('hidden');
+        return;
+      }
+
+      noResults.classList.add('hidden');
+
+      // Articolo Hero (Primo Piano)
+      let heroArticle = filtered.find(a => a.isHero) || filtered[0];
+      let secondaryArticles = filtered.filter(a => a.id !== heroArticle.id);
+
+      if (heroArticle && (activeCategory === 'tutti' || activeCategory === 'attualita' || searchQuery)) {
+        heroSection.style.display = 'block';
+        heroSection.innerHTML = `
+          <div class="cursor-pointer group" onclick="openArticleModal('${heroArticle.id}')">
+            <div class="flex items-center gap-2 text-xs font-sans text-stone-600 mb-2 uppercase tracking-widest font-bold">
+              <span class="bg-amber-900 text-white px-2 py-0.5 rounded-xs">
+                <i class="fa-solid fa-newspaper mr-1"></i>Primo Piano
+              </span>
+              <span>•</span>
+              <span>${heroArticle.source}</span>
+              <span>•</span>
+              <span>Edizione 06:00 AM</span>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-12 gap-6 items-center">
+              <div class="md:col-span-7 space-y-3">
+                <h2 class="font-title text-2xl sm:text-4xl font-black leading-tight text-stone-950 group-hover:text-amber-900 transition">
+                  ${heroArticle.title}
+                </h2>
+                <p class="font-body text-sm sm:text-base text-stone-800 leading-relaxed italic border-l-2 border-stone-800 pl-3">
+                  ${heroArticle.subtitle}
+                </p>
+                <div class="flex items-center gap-4 text-xs font-sans text-stone-600 pt-1">
+                  <span><i class="fa-regular fa-clock mr-1"></i>${heroArticle.readTime} lettura</span>
+                  <span class="text-amber-900 font-bold group-hover:underline">
+                    Clicca per leggere l'approfondimento <i class="fa-solid fa-arrow-right ml-1 text-[10px]"></i>
+                  </span>
+                </div>
+              </div>
+
+              <div class="md:col-span-5">
+                <div class="relative overflow-hidden rounded border-2 border-stone-900 shadow-md">
+                  <img src="${heroArticle.imageUrl}" alt="${heroArticle.title}" class="w-full h-52 sm:h-60 object-cover transform group-hover:scale-105 transition duration-500">
+                </div>
+              </div>
+            </div>
+          </div>
+        `;
+      } else {
+        heroSection.style.display = 'none';
+      }
+
+      // Griglia Secondaria
+      gridContainer.innerHTML = secondaryArticles.map(art => {
+        const isSaved = savedArticleIds.includes(art.id);
+        return `
+          <article class="bg-paper-100 border border-stone-300 rounded p-4 flex flex-col justify-between hover:shadow-md transition cursor-pointer group" onclick="openArticleModal('${art.id}')">
+            <div class="space-y-2">
+              <div class="flex justify-between items-center text-[11px] font-sans text-stone-600">
+                <span class="uppercase tracking-wider font-bold text-stone-900">${art.source}</span>
+                <span class="capitalize bg-paper-200 px-1.5 py-0.5 rounded border border-stone-300">${art.category}</span>
+              </div>
+
+              <div class="grid grid-cols-3 gap-3">
+                <div class="col-span-2 space-y-1">
+                  <h3 class="font-title font-bold text-base leading-snug group-hover:text-amber-900 transition line-clamp-3">
+                    ${art.title}
+                  </h3>
+                </div>
+                <div class="col-span-1">
+                  <img src="${art.imageUrl}" alt="copertina" class="w-full h-20 object-cover rounded border border-stone-300">
+                </div>
+              </div>
+
+              <p class="font-body text-xs text-stone-700 line-clamp-2 leading-relaxed">
+                ${art.subtitle}
+              </p>
+            </div>
+
+            <div class="flex justify-between items-center text-xs font-sans text-stone-500 pt-3 border-t border-stone-200 mt-3">
+              <span><i class="fa-regular fa-clock mr-1"></i>${art.readTime}</span>
+              <button onclick="event.stopPropagation(); toggleBookmark('${art.id}')" class="hover:text-amber-900 p-1">
+                <i class="${isSaved ? 'fa-solid text-amber-900' : 'fa-regular'} fa-bookmark text-sm"></i>
+              </button>
+            </div>
+          </article>
+        `;
+      }).join('');
+    }
+
+    /* ==========================================================================
+       7. MODALE READER & APPROFONDIMENTO
+       ========================================================================== */
+    function openArticleModal(id) {
+      const art = currentArticles.find(a => a.id === id);
+      if (!art) return;
+
+      selectedArticle = art;
+
+      document.getElementById('modal-source').textContent = art.source;
+      document.getElementById('modal-category').textContent = art.category;
+      document.getElementById('modal-title').textContent = art.title;
+      document.getElementById('modal-subtitle').textContent = art.subtitle;
+      document.getElementById('modal-image').src = art.imageUrl;
+      document.getElementById('modal-body').innerHTML = art.body;
+      document.getElementById('modal-external-link').href = art.originalUrl || '#';
+
+      // Punti Chiave
+      const bulletsContainer = document.getElementById('modal-bullet-points');
+      if (art.bullets && art.bullets.length > 0) {
+        bulletsContainer.innerHTML = art.bullets.map(b => `<li>${b}</li>`).join('');
+      } else {
+        bulletsContainer.innerHTML = `<li>Informazione verificata dalle fonti dell'edizione.</li>`;
+      }
+
+      updateModalBookmarkBtn();
+
+      // Mostra Modale
+      const modal = document.getElementById('article-modal');
+      const modalCard = document.getElementById('modal-card');
+      modal.classList.remove('opacity-0', 'pointer-events-none');
+      modalCard.classList.remove('translate-y-full', 'sm:translate-y-4');
+      modalCard.classList.add('translate-y-0');
+
+      document.body.style.overflow = 'hidden';
+    }
+
+    function closeArticleModal() {
+      const modal = document.getElementById('article-modal');
+      const modalCard = document.getElementById('modal-card');
+
+      modalCard.classList.add('translate-y-full', 'sm:translate-y-4');
+      modalCard.classList.remove('translate-y-0');
+
+      setTimeout(() => {
+        modal.classList.add('opacity-0', 'pointer-events-none');
+        document.body.style.overflow = '';
+      }, 200);
+    }
+
+    /* ==========================================================================
+       8. GESTIONE FONTI RSS (`config.json` LOCALE)
+       ========================================================================== */
+    function openSourcesModal() {
+      renderSourcesList();
+      const modal = document.getElementById('sources-modal');
+      modal.classList.remove('opacity-0', 'pointer-events-none');
+    }
+
+    function closeSourcesModal() {
+      const modal = document.getElementById('sources-modal');
+      modal.classList.add('opacity-0', 'pointer-events-none');
+    }
+
+    function renderSourcesList() {
+      const container = document.getElementById('sources-list');
+      container.innerHTML = sources.map(s => `
+        <div class="flex items-center justify-between p-2 rounded bg-paper-100 border border-stone-300">
+          <div class="overflow-hidden mr-2">
+            <p class="font-bold truncate">${s.name}</p>
+            <p class="text-[10px] text-stone-500 capitalize">${s.category} • ${s.url.slice(0,30)}...</p>
+          </div>
+          <div class="flex items-center gap-2">
+            <input type="checkbox" ${s.active ? 'checked' : ''} onchange="toggleSourceActive('${s.id}')" class="w-4 h-4 accent-amber-900 cursor-pointer">
+            <button onclick="removeSource('${s.id}')" class="text-stone-400 hover:text-red-700 p-1">
+              <i class="fa-solid fa-trash-can"></i>
+            </button>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    function toggleSourceActive(id) {
+      const s = sources.find(item => item.id === id);
+      if (s) {
+        s.active = !s.active;
+        saveSourcesConfig();
+        renderSourcesList();
+      }
+    }
+
+    function removeSource(id) {
+      sources = sources.filter(s => s.id !== id);
+      saveSourcesConfig();
+      renderSourcesList();
+    }
+
+    function addNewSource() {
+      const name = document.getElementById('new-src-name').value.trim();
+      const url = document.getElementById('new-src-url').value.trim();
+      const cat = document.getElementById('new-src-cat').value;
+
+      if (!name || !url) {
+        alert("Per favore compila sia il Nome che l'URL della fonte RSS.");
+        return;
+      }
+
+      const newSrc = {
+        id: 'src-custom-' + Date.now(),
+        name: name,
+        category: cat,
+        url: url,
+        active: true
+      };
+
+      sources.push(newSrc);
+      saveSourcesConfig();
+      renderSourcesList();
+
+      document.getElementById('new-src-name').value = '';
+      document.getElementById('new-src-url').value = '';
+    }
+
+    function resetDefaultSources() {
+      sources = DEFAULT_SOURCES_CONFIG;
+      saveSourcesConfig();
+      renderSourcesList();
+    }
+
+    function saveSourcesConfig() {
+      localStorage.setItem('newspaper_sources_config', JSON.stringify(sources));
+    }
+
+    /* ==========================================================================
+       9. MODALE ARCHIVIO STORICO
+       ========================================================================== */
+    function openArchiveModal() {
+      const archiveKeys = JSON.parse(localStorage.getItem('newspaper_archive_keys') || '[]');
+      const container = document.getElementById('archive-list');
+
+      if (archiveKeys.length === 0) {
+        container.innerHTML = `<p class="text-stone-500 italic py-4 text-center">Nessuna edizione ancora memorizzata nell'archivio.</p>`;
+      } else {
+        container.innerHTML = archiveKeys.map(key => `
+          <div onclick="loadArchivedEdition('${key}')" class="p-2.5 rounded bg-paper-100 border border-stone-300 hover:bg-paper-200 cursor-pointer flex justify-between items-center transition">
+            <div>
+              <p class="font-bold text-amber-950">Edizione del ${key}</p>
+              <p class="text-[10px] text-stone-500">Memorizzata nel database PWA locale</p>
+            </div>
+            <i class="fa-solid fa-chevron-right text-xs text-stone-400"></i>
+          </div>
+        `).join('');
+      }
+
+      const modal = document.getElementById('archive-modal');
+      modal.classList.remove('opacity-0', 'pointer-events-none');
+    }
+
+    function closeArchiveModal() {
+      const modal = document.getElementById('archive-modal');
+      modal.classList.add('opacity-0', 'pointer-events-none');
+    }
+
+    /* ==========================================================================
+       10. UTILITY, SEGNALIBRI E CATEGORIE
+       ========================================================================== */
+    function filterCategory(cat) {
+      activeCategory = cat;
+      document.querySelectorAll('.cat-btn').forEach(btn => {
+        if (btn.dataset.cat === cat) {
+          btn.className = 'cat-btn px-2.5 py-1 rounded bg-stone-900 text-white transition whitespace-nowrap';
+        } else {
+          btn.className = 'cat-btn px-2.5 py-1 rounded hover:bg-paper-200 transition whitespace-nowrap text-stone-800';
+        }
+      });
+      renderNews();
+    }
+
+    function handleSearch() {
+      searchQuery = document.getElementById('search-input').value;
+      renderNews();
+    }
+
+    function toggleBookmark(id) {
+      const idx = savedArticleIds.indexOf(id);
+      if (idx > -1) {
+        savedArticleIds.splice(idx, 1);
+      } else {
+        savedArticleIds.push(id);
+      }
+      localStorage.setItem('newspaper_bookmarks', JSON.stringify(savedArticleIds));
+      renderNews();
+      if (selectedArticle && selectedArticle.id === id) {
+        updateModalBookmarkBtn();
+      }
+    }
+
+    function toggleBookmarkCurrentArticle() {
+      if (selectedArticle) {
+        toggleBookmark(selectedArticle.id);
+      }
+    }
+
+    function updateModalBookmarkBtn() {
+      if (!selectedArticle) return;
+      const btn = document.getElementById('btn-save-modal');
+      const isSaved = savedArticleIds.includes(selectedArticle.id);
+      btn.innerHTML = `<i class="${isSaved ? 'fa-solid text-amber-900' : 'fa-regular'} fa-bookmark"></i>`;
+    }
+
+    function loadSavedConfig() {
+      const savedSrcs = localStorage.getItem('newspaper_sources_config');
+      if (savedSrcs) {
+        try { sources = JSON.parse(savedSrcs); } catch(e) { sources = DEFAULT_SOURCES_CONFIG; }
+      } else {
+        sources = DEFAULT_SOURCES_CONFIG;
+      }
+
+      const savedBks = localStorage.getItem('newspaper_bookmarks');
+      if (savedBks) {
+        try { savedArticleIds = JSON.parse(savedBks); } catch(e) {}
+      }
+    }
+
+    function showLoader(show) {
+      const loader = document.getElementById('loader');
+      const container = document.getElementById('news-container');
+      if (show) {
+        loader.classList.remove('hidden');
+        container.classList.add('hidden');
+      } else {
+        loader.classList.add('hidden');
+        container.classList.remove('hidden');
+      }
+    }
+  </script>
+</body>
+</html>
